@@ -1,8 +1,10 @@
 Pal
 ===
 
-API
+  基于nodejs和ImageMagick的占位图片生成工具
 
-/{width}/{height}/{color}/{background}
+  API
 
-width和height必须要有.
+  /{width}/{height}/{color}/{background}
+  
+  width和height必须要有.
