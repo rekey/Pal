@@ -32,19 +32,6 @@ function createImage(_config, callback) {
             callback(filePath);
         }
     });
-    // var convert = spawn('convert', args);
-    // convert.stdout.on('data', function(data) {
-    //     console.log(data.toString());
-    // });
-    // convert.on('exit', function(code) {
-    //     if (code === null) {
-
-    //     } else {
-    //         setTimeout(function() {
-    //             callback(filePath);
-    //         }, 20);
-    //     }
-    // });
 }
 
 function parseParam(_url) {
@@ -109,5 +96,3 @@ http.createServer(function (request, response) {
 }).listen(9527);
 
 console.log('Server running at http://127.0.0.1:9527/');
-//-background "#dddaaa" -fill "#dddddd" -font /www/aller-light.ttf -size 100x100 -pointsize 72 -gravity center label:"100 x 100" /tmp/hjllt3sz.png
-//-background "#dddaaa" -fill "#dddddd" -font /www/aller-light.ttf -size 100x100 -pointsize 72 -gravity center label:"100 x 100" /tmp/hjllym9l.png
