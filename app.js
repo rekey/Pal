@@ -6,12 +6,10 @@ var http = require('http'),
     numCPUs = require('os').cpus().length;
 
 var config = {
-    filePath: '/tmp/',
     fontPath: __dirname + '/aller-light.ttf'
 };
 
 function createImage(_config, callback) {
-    var filePath = config.filePath + Date.now().toString(36) + '.png';
     var args = [];
     args.push('-background');
     args.push('"' + _config.background + '"');
@@ -26,19 +24,10 @@ function createImage(_config, callback) {
     args.push('-gravity');
     args.push('center');
     args.push('label:' + _config.width + 'x' + _config.height);
-    args.push(filePath);
+    args.push('png:-'); //use stdout instead of a temp file
     console.log(args.join(' '));
     //noinspection JSCheckFunctionSignatures
-    child_process.exec('convert ' + args.join(' '), function (error) {
-        if(error === null){
-            fs.readFile(filePath, function(err, data){
-                callback(data);
-                fs.unlink(filePath, function(){});
-            });
-        }else{
-            console.log(error);
-        }
-    });
+    child_process.exec('convert ' + args.join(' '), {encoding:'binary'}, callback);
 }
 
 function parseParam(_url) {
@@ -85,17 +74,22 @@ function spawnWebService(){
             response.end('Field Error');
             return;
         }
-        createImage(params, function (imgStream) {
-            //noinspection JSUnresolvedFunction
-            response.writeHead(200, {
-                'Content-Type': 'image/png',
-                'Content-Length': imgStream.length,
-                'cache-control': 'max-age=' + 1000 * 3600 * 24 * 30,
-                'Expires': new Date(Date.now() + 1000 * 3600 * 24 * 30)
-            });
+        createImage(params, function (error, imgStream) {
+            if(error === null) {
+                //noinspection JSUnresolvedFunction
+                response.writeHead(200, {
+                    'Content-Type': 'image/png',
+                    'Content-Length': imgStream.length,
+                    'cache-control': 'max-age=' + 1000 * 3600 * 24 * 30,
+                    'Expires': new Date(Date.now() + 1000 * 3600 * 24 * 30)
+                });
 
-            //noinspection JSCheckFunctionSignatures
-            response.end(imgStream, 'buffer');
+                //noinspection JSCheckFunctionSignatures
+                response.end(imgStream, 'binary');
+            }else{
+                response.end('Error. internal error.');
+                console.log(error);
+            }
         });
     });
 }
