@@ -1,7 +1,9 @@
 var http = require('http'),
     url = require('url'),
     child_process = require('child_process'),
-    fs = require('fs');
+    cluster = require('cluster'),
+    fs = require('fs'),
+    numCPUs = require('os').cpus().length;
 
 var config = {
     filePath: '/tmp/',
@@ -28,8 +30,13 @@ function createImage(_config, callback) {
     console.log(args.join(' '));
     //noinspection JSCheckFunctionSignatures
     child_process.exec('convert ' + args.join(' '), function (error) {
-        if (error == null) {
-            callback(filePath);
+        if(error === null){
+            fs.readFile(filePath, function(err, data){
+                callback(data);
+                fs.unlink(filePath, function(){});
+            });
+        }else{
+            console.log(error);
         }
     });
 }
@@ -66,33 +73,47 @@ function color3to6(color) {
 }
 
 //noinspection JSUnresolvedFunction
-http.createServer(function (request, response) {
-    var params = parseParam(request.url);
-    if (!params || !params.width || !params.height) {
-        //noinspection JSUnresolvedFunction
-        response.writeHead(200, {
-            'Content-Type': 'text/plain'
-        });
-        //noinspection JSValidateTypes
-        response.end('Field Error');
-        return;
-    }
-    createImage(params, function (filePath) {
-        //noinspection JSUnresolvedFunction
-        var img = fs.readFileSync(filePath);
-        //noinspection JSUnresolvedFunction
-        response.writeHead(200, {
-            'Content-Type': 'image/png',
-            'Content-Length': img.length,
-            'cache-control': 'max-age=' + 1000 * 3600 * 24 * 30,
-            'Expires': new Date(Date.now() + 1000 * 3600 * 24 * 30)
-        });
+function spawnWebService(){
+    return http.createServer(function (request, response) {
+        var params = parseParam(request.url);
+        if (!params || !params.width || !params.height) {
+            //noinspection JSUnresolvedFunction
+            response.writeHead(200, {
+                'Content-Type': 'text/plain'
+            });
+            //noinspection JSValidateTypes
+            response.end('Field Error');
+            return;
+        }
+        createImage(params, function (imgStream) {
+            //noinspection JSUnresolvedFunction
+            response.writeHead(200, {
+                'Content-Type': 'image/png',
+                'Content-Length': imgStream.length,
+                'cache-control': 'max-age=' + 1000 * 3600 * 24 * 30,
+                'Expires': new Date(Date.now() + 1000 * 3600 * 24 * 30)
+            });
 
-        //noinspection JSCheckFunctionSignatures
-        response.write(img, 'buffer');
-        response.end(filePath);
-        child_process.exec('rm ' + filePath);
+            //noinspection JSCheckFunctionSignatures
+            response.end(imgStream, 'buffer');
+        });
     });
-}).listen(9527);
+}
 
-console.log('Server running at http://127.0.0.1:9527/');
+var port = 9527;
+//Fork workers for multiple core CPU
+if (cluster.isMaster) {
+    // Fork workers.
+    for (var i = 0; i < numCPUs; i++) {
+        cluster.fork();
+    }
+    cluster.on('death', function(worker) {
+        console.log('worker ' + worker.pid + ' died');
+        //if died spwan again
+        cluster.fork();
+    });
+    console.log( 'Master process running at http://127.0.0.1:'+port+' with pid ' + process.pid );
+} else {
+    //do work!
+    spawnWebService().listen(port);
+}
