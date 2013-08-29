@@ -19,8 +19,8 @@ function createImage(_config, callback) {
     args.push(config.fontPath);
     args.push('-size');
     args.push(_config.width + 'x' + _config.height);
-    //args.push('-pointsize');
-    //args.push('72');
+    args.push('-pointsize');
+    args.push('22');
     args.push('-gravity');
     args.push('center');
     args.push('label:' + _config.width + 'x' + _config.height);
